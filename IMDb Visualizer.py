@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Input, Output
 
 #### Gets IMDb ID from show name
 
@@ -36,6 +37,7 @@ demo = []
 rating = []
 votes = []
 wanted = ['imdb_users', 'males', 'females']
+
 #####Finds rating and number of voters for listed demographics
 for x in range(0, len(rt)-5):
     href = str(rt[x].find('a'))
@@ -47,10 +49,6 @@ for x in range(0, len(rt)-5):
         rating.append(rt[x].find(class_='bigcell').text)
         votes.append(str(rt[x].find('a').text).strip())
 
-# data = [go.Bar(
-#         x = demo,
-#         y = rating),
-#         ]
 
 fig = go.Figure()
 fig.add_trace(go.Bar(
@@ -66,7 +64,7 @@ fig.update_layout(
 
 #pyo.plot(fig, filename='IMDb.html')
 
-fig.show()
+#fig.show()
 
 ########### Initiate the app
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -77,12 +75,21 @@ app.title="Breakdown of IMDb Ratings by Demographic"
 ########### Set up the layout
 app.layout = html.Div(children=[
     html.H1("Breakdown of IMDb Ratings by Demographic"),
+    html.Br(),
+    dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
+    html.Div(id="output"),
     dcc.Graph(
         id='IMDb',
-        figure=fig
-    )
+        figure=fig),
     ]
 )
+
+@app.callback(
+    Output("output", "children"),
+    [Input("input1", "value")]
+)
+def update_output_div(input_value):
+    return 'Output: {}'.format(input_value)
 
 if __name__ == '__main__':
     app.run_server()
