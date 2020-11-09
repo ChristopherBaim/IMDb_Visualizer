@@ -2,6 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 import plotly.offline as pyo
 import plotly.graph_objs as go
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
 
 #### Gets IMDb ID from show name
 
@@ -61,5 +64,25 @@ fig.add_trace(go.Bar(
 fig.update_layout(
     title='IMDb Ratings by Demographic')
 
-pyo.plot(fig, filename='IMDb.html')
+#pyo.plot(fig, filename='IMDb.html')
 
+fig.show()
+
+########### Initiate the app
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
+app.title="Breakdown of IMDb Ratings by Demographic"
+
+########### Set up the layout
+app.layout = html.Div(children=[
+    html.H1("Breakdown of IMDb Ratings by Demographic"),
+    dcc.Graph(
+        id='IMDb',
+        figure=fig
+    )
+    ]
+)
+
+if __name__ == '__main__':
+    app.run_server()
