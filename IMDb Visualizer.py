@@ -53,7 +53,9 @@ fig = go.Figure()
 fig.add_trace(go.Bar(
     x= demo,
     y = rating,
-    marker_color = ['black', 'deepskyblue', 'deeppink']))
+    marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
+    text = rating,
+    textposition = 'auto'))
 
 
 fig.update_layout(
