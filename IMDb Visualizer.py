@@ -28,49 +28,47 @@ def getShows(rawName):
         return showList
 
 #### Collects IMDb rating information for a given show and returns a figure
-def singleShow(cleanName, imdbID):
+def singleShow(imdbID):
 
-    if cleanName == None:
-        print("No show found")
+    url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
 
-    else:
-        url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
+    page = requests.get(url2)
+    soup = BeautifulSoup(page.text, 'html.parser')
 
-        page = requests.get(url2)
-        soup = BeautifulSoup(page.text, 'html.parser')
+    cleanName = soup.find(class_='subpage_title_block__right-column').find('a').text
 
-        rt = soup.find_all(class_='ratingTable')
+    rt = soup.find_all(class_='ratingTable')
 
-        demo = []
-        rating = []
-        votes = []
-        wanted = ['imdb_users', 'males', 'females']
+    demo = []
+    rating = []
+    votes = []
+    wanted = ['imdb_users', 'males', 'females']
 
-        #####Finds rating and number of voters for listed demographics
-        for x in range(0, len(rt)-5):
-            href = str(rt[x].find('a'))
-            index = href.find("=", 10) + 1
-            index2 = href.find(">", 10) - 1
+    #####Finds rating and number of voters for listed demographics
+    for x in range(0, len(rt)-5):
+        href = str(rt[x].find('a'))
+        index = href.find("=", 10) + 1
+        index2 = href.find(">", 10) - 1
 
-            if href[index:index2] in wanted:
-                demo.append(href[index:index2])
-                rating.append(rt[x].find(class_='bigcell').text)
-                votes.append(str(rt[x].find('a').text).strip())
+        if href[index:index2] in wanted:
+            demo.append(href[index:index2])
+            rating.append(rt[x].find(class_='bigcell').text)
+            votes.append(str(rt[x].find('a').text).strip())
 
 
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x= demo,
-            y = rating,
-            marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
-            text = rating,
-            textposition = 'auto'))
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x= demo,
+        y = rating,
+        marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
+        text = rating,
+        textposition = 'auto'))
 
 
-        fig.update_layout(
-            title='IMDb Ratings for ' + cleanName)
-        return fig
-    return go.Figure()
+    fig.update_layout(
+        title='IMDb Ratings for ' + cleanName)
+    return fig
+
 
 fig = go.Figure()
 
@@ -81,12 +79,19 @@ server = app.server
 app.title="Breakdown of IMDb Ratings by Demographic"
 
 #### Set up the layout
+
+dropDownList = []
 app.layout = html.Div(children=[
     html.H1("Breakdown of IMDb Ratings by Demographic"),
     html.Br(),
     dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
     html.Button('Search', id='submit-val'),
     html.Div(id="output1"),
+    dcc.Dropdown(
+        id='dropdown',
+        options=dropDownList,
+        value=''
+    ),
     dcc.Graph(
         id='IMDb',
         figure=fig),
@@ -96,25 +101,39 @@ app.layout = html.Div(children=[
 #### Update figure and text upon search
 @app.callback(
     [Output('IMDb', 'figure'),
-    Output("output1", "children")],
-    [Input("submit-val", 'n_clicks')],
+    Output('output1', 'children'),
+    Output('dropdown', 'options')],
+    [Input('submit-val', 'n_clicks'),
+    Input('dropdown', 'value')],
     [State('input1', 'value')]
 )
-def update_output(clicks, input_value):
-    if input_value != None:
 
-        showList = getShows(input_value)
+#### Confused how to make decide when to take show value from text box vs dropdown
+def update_from_search(clicks, dropValue, input_value):
+    global dropDownList
+    trigger = dash.callback_context.triggered[0]['prop_id']
+    print(trigger)
+    if trigger == 'submit-val.n_clicks':
+        if input_value != None:
 
-        if showList != {}:
-            firstShow = next(iter(showList.keys()))
-            firstShowID = showList[firstShow]
-            updatedFig = singleShow(firstShow, firstShowID)
+            showList = getShows(input_value)
 
-            return updatedFig, ''
-        else:
-            return go.Figure(), 'No show found with name: {}'.format(input_value)
-    else:
-        return go.Figure(), ''
+            if showList != {}:
+                firstShow = next(iter(showList.keys()))
+                firstShowID = showList[firstShow]
+                updatedFig = singleShow(firstShowID)
+                dropDownList = [{'label': i, 'value': showList[i]} for i in iter(showList.keys())]
+                return updatedFig, '', dropDownList
+            else:
+                return go.Figure(), 'No show found with name: {}'.format(input_value), []
+
+    elif trigger == 'dropdown.value':
+        if dropValue != '':
+            print("dropValue trying to update")
+            updatedFig = singleShow(dropValue)
+            return updatedFig, '', dropDownList
+
+    return go.Figure(), '', []
 
 if __name__ == '__main__':
     app.run_server()
