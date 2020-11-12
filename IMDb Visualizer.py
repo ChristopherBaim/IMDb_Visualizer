@@ -22,7 +22,8 @@ def getShows(rawName):
 
         for show in allShows:
             href = str(show.find('a'))
-            imdbID = href[16:25]
+            end = href.find('/', 17)
+            imdbID = href[16:end]
             showList[show.find('a').text] = imdbID
 
         return showList
@@ -130,6 +131,7 @@ def update_from_search(clicks, dropValue, input_value):
     elif trigger == 'dropdown.value':
         if dropValue != '':
             print("dropValue trying to update")
+            print(dropValue)
             updatedFig = singleShow(dropValue)
             return updatedFig, '', dropDownList
 
