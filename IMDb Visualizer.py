@@ -7,11 +7,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 
-#### Gets IMDb ID from show name
-
-
-def singleShow(rawName):
-    #rawName = input("Show name:")
+#### Returns list of show names correspnding IMDb IDs for the search term
+def getShows(rawName):
     if rawName != None:
         showName = rawName.replace(' ', '+')
         url = 'http://www.imdb.com/search/title?title=' + showName + '&title_type=tv_series'
@@ -19,66 +16,71 @@ def singleShow(rawName):
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
 
-        show = soup.find(class_='lister-item-header')
+        allShows = soup.find_all(class_='lister-item-header')
 
-        if show == None:
-            print("No show found")
-        else:
+        showList = {}
+
+        for show in allShows:
             href = str(show.find('a'))
-
-
-            #### Confirm correct show name
-            cleanName = show.find('a').text
-            print(cleanName)
             imdbID = href[16:25]
-            print(imdbID)
+            showList[show.find('a').text] = imdbID
 
-            url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
+        return showList
 
-            page = requests.get(url2)
-            soup = BeautifulSoup(page.text, 'html.parser')
+#### Collects IMDb rating information for a given show and returns a figure
+def singleShow(cleanName, imdbID):
 
-            rt = soup.find_all(class_='ratingTable')
+    if cleanName == None:
+        print("No show found")
 
-            demo = []
-            rating = []
-            votes = []
-            wanted = ['imdb_users', 'males', 'females']
+    else:
+        url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
 
-            #####Finds rating and number of voters for listed demographics
-            for x in range(0, len(rt)-5):
-                href = str(rt[x].find('a'))
-                index = href.find("=", 10) + 1
-                index2 = href.find(">", 10) - 1
+        page = requests.get(url2)
+        soup = BeautifulSoup(page.text, 'html.parser')
 
-                if href[index:index2] in wanted:
-                    demo.append(href[index:index2])
-                    rating.append(rt[x].find(class_='bigcell').text)
-                    votes.append(str(rt[x].find('a').text).strip())
+        rt = soup.find_all(class_='ratingTable')
+
+        demo = []
+        rating = []
+        votes = []
+        wanted = ['imdb_users', 'males', 'females']
+
+        #####Finds rating and number of voters for listed demographics
+        for x in range(0, len(rt)-5):
+            href = str(rt[x].find('a'))
+            index = href.find("=", 10) + 1
+            index2 = href.find(">", 10) - 1
+
+            if href[index:index2] in wanted:
+                demo.append(href[index:index2])
+                rating.append(rt[x].find(class_='bigcell').text)
+                votes.append(str(rt[x].find('a').text).strip())
 
 
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x= demo,
-                y = rating,
-                marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
-                text = rating,
-                textposition = 'auto'))
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x= demo,
+            y = rating,
+            marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
+            text = rating,
+            textposition = 'auto'))
 
 
-            fig.update_layout(
-                title='IMDb Ratings for ' + cleanName)
-            return fig
+        fig.update_layout(
+            title='IMDb Ratings for ' + cleanName)
+        return fig
     return go.Figure()
+
 fig = go.Figure()
 
-########### Initiate the app
+#### Initiate the app
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 app.title="Breakdown of IMDb Ratings by Demographic"
 
-########### Set up the layout
+#### Set up the layout
 app.layout = html.Div(children=[
     html.H1("Breakdown of IMDb Ratings by Demographic"),
     html.Br(),
@@ -91,6 +93,7 @@ app.layout = html.Div(children=[
     ]
 )
 
+#### Update figure and text upon search
 @app.callback(
     [Output('IMDb', 'figure'),
     Output("output1", "children")],
@@ -98,10 +101,20 @@ app.layout = html.Div(children=[
     [State('input1', 'value')]
 )
 def update_output(clicks, input_value):
-    updatedFig = singleShow(input_value)
-    if len(updatedFig['data']) > 0:
-        return updatedFig, ''
-    return updatedFig, 'No show found with name: {}'.format(input_value)
+    if input_value != None:
+
+        showList = getShows(input_value)
+
+        if showList != {}:
+            firstShow = next(iter(showList.keys()))
+            firstShowID = showList[firstShow]
+            updatedFig = singleShow(firstShow, firstShowID)
+
+            return updatedFig, ''
+        else:
+            return go.Figure(), 'No show found with name: {}'.format(input_value)
+    else:
+        return go.Figure(), ''
 
 if __name__ == '__main__':
     app.run_server()
