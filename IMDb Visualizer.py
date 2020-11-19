@@ -65,9 +65,12 @@ def singleShow(imdbID):
         text = rating,
         textposition = 'auto'))
 
-
-    fig.update_layout(
-        title='IMDb Ratings for ' + cleanName)
+    if demo != []:
+        fig.update_layout(
+            title='IMDb Ratings for ' + cleanName)
+    else:
+        fig.update_layout(
+            title='No IMDb Ratings for ' + cleanName)
     return fig
 
 
@@ -77,33 +80,49 @@ fig = go.Figure()
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
+app.header_colors = {'bg_color': '#0C4142', 'font_color': 'white'}
 app.title="Breakdown of IMDb Ratings by Demographic"
 
 #### Set up the layout
 
 dropDownList = []
 app.layout = html.Div(children=[
-    html.H1("Breakdown of IMDb Ratings by Demographic"),
-    html.Br(),
-    dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
-    html.Button('Search', id='submit-val'),
-    html.Div(id="output1"),
-    dcc.Dropdown(
-        id='dropdown',
-        options=dropDownList,
-        value=''
+    html.Div(
+        id = 'app-page-header',
+        children=[
+            html.H2("IMDb Visualizer")
+        ],
+        style= {'background': '#0C4142', 'font_color': 'white', 'color': 'white',
+                'font-family': 'Open Sans', 'position':'absolute','top':'0px', 'left':'0px', 'width':'100%'
+                }
     ),
-    dcc.Graph(
-        id='IMDb',
-        figure=fig),
-    ]
+    html.Div(id='content', children=[
+        dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
+        html.Button('Search', id='submit-val'),
+        html.Div(id="output1"),
+        html.Div(id="dropText"),
+        dcc.Dropdown(
+            id='dropdown',
+            options=dropDownList,
+            value='',
+            style= {'display': 'none'}
+        ),
+        dcc.Graph(
+            id='IMDb',
+            figure=fig),
+
+    ], style={'margin':'0px','margin-top':'0px', 'width':'100%',
+              'height':'auto', 'position':'absolute','top':'100px'}
+             )]
 )
 
 #### Update figure and text upon search
 @app.callback(
     [Output('IMDb', 'figure'),
     Output('output1', 'children'),
-    Output('dropdown', 'options')],
+    Output('dropdown', 'options'),
+    Output('dropdown', 'style'),
+    Output('dropText', 'children')],
     [Input('submit-val', 'n_clicks'),
     Input('dropdown', 'value')],
     [State('input1', 'value')]
@@ -124,18 +143,38 @@ def update_from_search(clicks, dropValue, input_value):
                 firstShowID = showList[firstShow]
                 updatedFig = singleShow(firstShowID)
                 dropDownList = [{'label': i, 'value': showList[i]} for i in iter(showList.keys())]
-                return updatedFig, '', dropDownList
+                return(updatedFig,
+                       '',
+                       dropDownList,
+                       {'display': 'block'},
+                       'Wrong show? Check here for other results:'
+                       )
             else:
-                return go.Figure(), 'No show found with name: {}'.format(input_value), []
+                return(go.Figure(),
+                       'No show found with name: {}'.format(input_value),
+                      [],
+                      {'display': 'none'},
+                      ''
+                       )
 
     elif trigger == 'dropdown.value':
         if dropValue != '':
             print("dropValue trying to update")
             print(dropValue)
             updatedFig = singleShow(dropValue)
-            return updatedFig, '', dropDownList
+            return(updatedFig,
+                   '',
+                   dropDownList,
+                   {'display': 'block'},
+                   'Wrong show? Check here for other results:'
+                   )
 
-    return go.Figure(), '', []
+    return(go.Figure(),
+           '',
+           [],
+           {'display': 'none'},
+           ''
+           )
 
 if __name__ == '__main__':
     app.run_server()
