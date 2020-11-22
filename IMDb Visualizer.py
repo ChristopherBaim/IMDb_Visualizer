@@ -30,7 +30,7 @@ def getShows(rawName):
         return showList
 
 #### Collects IMDb rating information for a given show and returns a figure
-def singleShow(imdbID):
+def singleShow(imdbID, mode):
 
     url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
 
@@ -44,7 +44,15 @@ def singleShow(imdbID):
     demo = []
     rating = []
     votes = []
-    wanted = ['imdb_users', 'males', 'females']
+    markerColor = []
+    if mode == 'Gender':
+        wanted = ['imdb_users', 'males', 'females']
+        markerColor = ['darkslateblue', 'cornflowerblue', 'hotpink']
+        print('Gender')
+    elif mode == 'Age':
+        wanted = ['imdb_users', 'aged_under_18', 'aged_18_29','aged_30_44','aged_45_plus']
+        markerColor = ['darkslateblue','#3a4b53', '#57707d','#7d97a5','#becbd2']
+        print('Age')
 
     #####Finds rating and number of voters for listed demographics
     for x in range(0, len(rt)-5):
@@ -62,13 +70,15 @@ def singleShow(imdbID):
     fig.add_trace(go.Bar(
         x= demo,
         y = rating,
-        marker_color = ['darkslateblue', 'cornflowerblue', 'hotpink'],
+        marker_color = markerColor,
         text = rating,
         textposition = 'auto'))
 
     if demo != []:
         fig.update_layout(
-            title='IMDb Ratings for ' + cleanName)
+            title='IMDb Ratings for ' + cleanName,
+            yaxis = {'range':[0,10]})
+
     else:
         fig.update_layout(
             title='No IMDb Ratings for ' + cleanName)
@@ -127,6 +137,11 @@ tab1 = dbc.Card(
 tab2 = dbc.Card(
     dbc.CardBody(
         [
+            dbc.RadioItems(id='RadioSelect',
+                       options=[
+                           {'label':'Gender', 'value':'Gender'},
+                           {'label':'Age', 'value':'Age'}
+                        ], value='Gender'),
             dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
             dbc.Button('Search', id='submit-val', color='primary'),
             html.Div(id="output1"),
@@ -152,9 +167,13 @@ app.layout = html.Div(children=[
     dbc.Row([
         dbc.Col(tabs),
         dbc.Col(
-            dcc.Graph(
-            id='IMDb',
-            figure=fig),
+            dbc.Card(
+                dbc.CardBody(
+                    dcc.Graph(
+                    id='IMDb',
+                    figure=fig),
+                )
+            )
         ),
     ])
 ]
@@ -169,13 +188,15 @@ app.layout = html.Div(children=[
     Output('dropdown', 'style'),
     Output('dropText', 'children')],
     [Input('submit-val', 'n_clicks'),
-    Input('dropdown', 'value')],
+    Input('dropdown', 'value'),
+    Input('RadioSelect', 'value')],
     [State('input1', 'value')]
 )
 
 #### Confused how to make decide when to take show value from text box vs dropdown
-def update_from_search(clicks, dropValue, input_value):
+def update_from_search(clicks, dropValue, radioValue, input_value):
     global dropDownList
+    global showList
     trigger = dash.callback_context.triggered[0]['prop_id']
     print(trigger)
     if trigger == 'submit-val.n_clicks':
@@ -185,33 +206,55 @@ def update_from_search(clicks, dropValue, input_value):
 
             if showList != {}:
                 firstShowID = next(iter(showList.keys()))
-                updatedFig = singleShow(firstShowID)
+                updatedFig = singleShow(firstShowID, radioValue)
                 dropDownList = [{'label': showList[i], 'value': i} for i in iter(showList.keys())]
                 return(updatedFig,
                        '',
                        dropDownList,
                        {'display': 'block'},
-                       'Wrong show? Check here for other results:'
+                       'Wrong show? Check here for other results:',
+
                        )
             else:
                 return(go.Figure(),
                        'No show found with name: {}'.format(input_value),
                       [],
                       {'display': 'none'},
-                      ''
+                      '',
+
                        )
 
     elif trigger == 'dropdown.value':
         if dropValue != '':
             print("dropValue trying to update")
             print(dropValue)
-            updatedFig = singleShow(dropValue)
+            print(dropDownList)
+            updatedFig = singleShow(dropValue, radioValue)
             return(updatedFig,
                    '',
                    dropDownList,
                    {'display': 'block'},
                    'Wrong show? Check here for other results:'
                    )
+
+    elif trigger  == 'RadioSelect.value':
+        if dropValue != '':
+            updatedFig = singleShow(dropValue, radioValue)
+            return (updatedFig,
+                    '',
+                    dropDownList,
+                    {'display': 'block'},
+                    'Wrong show? Check here for other results:'
+                    )
+        elif len(dropDownList) > 0:
+            updatedFig = singleShow(next(iter(showList.keys())), radioValue)
+            return (updatedFig,
+                    '',
+                    dropDownList,
+                    {'display': 'block'},
+                    'Wrong show? Check here for other results:'
+                    )
+
 
     return(go.Figure(),
            '',
