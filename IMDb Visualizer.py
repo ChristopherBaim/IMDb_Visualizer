@@ -5,6 +5,7 @@ import plotly.graph_objs as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 #### Returns list of show names correspnding IMDb IDs for the search term
@@ -21,11 +22,11 @@ def getShows(rawName):
         showList = {}
 
         for show in allShows:
+            year = show.find(class_='lister-item-year text-muted unbold').text
             href = str(show.find('a'))
             end = href.find('/', 17)
             imdbID = href[16:end]
-            showList[show.find('a').text] = imdbID
-
+            showList[imdbID] = show.find('a').text + " " + year
         return showList
 
 #### Collects IMDb rating information for a given show and returns a figure
@@ -77,44 +78,54 @@ def singleShow(imdbID):
 fig = go.Figure()
 
 #### Initiate the app
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
-app.header_colors = {'bg_color': '#0C4142', 'font_color': 'white'}
-app.title="Breakdown of IMDb Ratings by Demographic"
 
 #### Set up the layout
 
 dropDownList = []
-app.layout = html.Div(children=[
-    html.Div(
-        id = 'app-page-header',
-        children=[
-            html.H2("IMDb Visualizer")
-        ],
-        style= {'background': '#0C4142', 'font_color': 'white', 'color': 'white',
-                'font-family': 'Open Sans', 'position':'absolute','top':'0px', 'left':'0px', 'width':'100%'
-                }
-    ),
-    html.Div(id='content', children=[
-        dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
-        html.Button('Search', id='submit-val'),
-        html.Div(id="output1"),
-        html.Div(id="dropText"),
-        dcc.Dropdown(
-            id='dropdown',
-            options=dropDownList,
-            value='',
-            style= {'display': 'none'}
-        ),
-        dcc.Graph(
-            id='IMDb',
-            figure=fig),
-
-    ], style={'margin':'0px','margin-top':'0px', 'width':'100%',
-              'height':'auto', 'position':'absolute','top':'100px'}
-             )]
+PLOTLY_LOGO = "https://images.plot.ly/logo/new-branding/plotly-logomark.png"
+GIT_LOGO = "/assets/GitHub-Mark-Light-64px.png"
+navbar = dbc.Navbar(
+    [
+    dbc.Row([
+        dbc.Col([
+            html.A(
+                html.Img(src=PLOTLY_LOGO, height="30px"),
+                href = "https://plot.ly"
+            ),
+            dbc.NavbarBrand("IMDb Visualizer", className="ml-2", style={'font-size': '25px', 'padding-left':'20px'}),
+        ]),
+        dbc.Col(
+            html.A(
+                html.Img(src=GIT_LOGO, height="30px"),
+                href = "https://plot.ly"
+            )
+        )
+        ])
+    ],
+    color="dark",
+    dark=True,
 )
+app.layout = html.Div(children=[
+    navbar,
+    html.Br(),
+    dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
+    html.Button('Search', id='submit-val'),
+    html.Div(id="output1"),
+    html.Div(id="dropText"),
+    dcc.Dropdown(
+        id='dropdown',
+        options=dropDownList,
+        value='',
+        style={'display': 'none'}
+    ),
+    dcc.Graph(
+        id='IMDb',
+        figure=fig),
+]
+)
+
 
 #### Update figure and text upon search
 @app.callback(
@@ -139,10 +150,9 @@ def update_from_search(clicks, dropValue, input_value):
             showList = getShows(input_value)
 
             if showList != {}:
-                firstShow = next(iter(showList.keys()))
-                firstShowID = showList[firstShow]
+                firstShowID = next(iter(showList.keys()))
                 updatedFig = singleShow(firstShowID)
-                dropDownList = [{'label': i, 'value': showList[i]} for i in iter(showList.keys())]
+                dropDownList = [{'label': showList[i], 'value': i} for i in iter(showList.keys())]
                 return(updatedFig,
                        '',
                        dropDownList,
