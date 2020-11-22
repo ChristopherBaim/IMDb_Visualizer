@@ -89,40 +89,74 @@ GIT_LOGO = "/assets/GitHub-Mark-Light-64px.png"
 navbar = dbc.Navbar(
     [
     dbc.Row([
-        dbc.Col([
+        dbc.Col(
             html.A(
                 html.Img(src=PLOTLY_LOGO, height="30px"),
                 href = "https://plot.ly"
-            ),
-            dbc.NavbarBrand("IMDb Visualizer", className="ml-2", style={'font-size': '25px', 'padding-left':'20px'}),
-        ]),
-        dbc.Col(
-            html.A(
-                html.Img(src=GIT_LOGO, height="30px"),
-                href = "https://plot.ly"
-            )
+            ), width=1
         )
-        ])
+        ]),
+    dbc.Row([
+        dbc.Col(
+            dbc.NavbarBrand("IMDb Visualizer", className="ml-2", style={'font-size': '25px', 'padding-left':'20px'}),
+        width=3
+        ),
+        ] ),
+    dbc.Row([
+        dbc.Col(
+            [
+                html.A(
+                    html.Img(src=GIT_LOGO, height="30px"),
+                    href = "https://github.com/yoyochris924/IMDb_Visualizer"
+                )
+            ])
+        ], justify='between')
+
     ],
     color="dark",
     dark=True,
 )
+tab1 = dbc.Card(
+    dbc.CardBody(
+        [
+            html.H3('What is IMDb Visualizer?'),
+            html.P('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.')
+        ]
+    )
+)
+tab2 = dbc.Card(
+    dbc.CardBody(
+        [
+            dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
+            dbc.Button('Search', id='submit-val', color='primary'),
+            html.Div(id="output1"),
+            html.Div(id="dropText"),
+            dcc.Dropdown(
+                id='dropdown',
+                options=dropDownList,
+                value='',
+                style={'display': 'none',}
+            ),
+        ]
+    )
+)
+tabs = dbc.Tabs(
+    [
+        dbc.Tab(tab1, label="About"),
+        dbc.Tab(tab2, label="Try it!"),
+    ]
+)
 app.layout = html.Div(children=[
     navbar,
     html.Br(),
-    dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
-    html.Button('Search', id='submit-val'),
-    html.Div(id="output1"),
-    html.Div(id="dropText"),
-    dcc.Dropdown(
-        id='dropdown',
-        options=dropDownList,
-        value='',
-        style={'display': 'none'}
-    ),
-    dcc.Graph(
-        id='IMDb',
-        figure=fig),
+    dbc.Row([
+        dbc.Col(tabs),
+        dbc.Col(
+            dcc.Graph(
+            id='IMDb',
+            figure=fig),
+        ),
+    ])
 ]
 )
 
