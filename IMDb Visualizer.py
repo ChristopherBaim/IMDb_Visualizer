@@ -12,7 +12,7 @@ from dash.dependencies import Input, Output, State
 def getShows(rawName):
     if rawName != None:
         showName = rawName.replace(' ', '+')
-        url = 'http://www.imdb.com/search/title?title=' + showName + '&title_type=tv_series'
+        url = 'http://www.imdb.com/search/title?title=' + showName + '&title_type=tv_series,tv_miniseries'
 
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
@@ -30,7 +30,54 @@ def getShows(rawName):
         return showList
 
 #### Collects IMDb rating information for a given show and returns a figure
-def singleShow(imdbID, mode):
+def makeFigure(rt, mode, cleanName):
+    demo = []
+    rating = []
+    votes = []
+    markerColor = []
+
+    if mode == 'Gender':
+        wanted = ['imdb_users', 'males', 'females']
+        markerColor = ['darkslateblue', 'cornflowerblue', 'hotpink']
+        print('Gender')
+    elif mode == 'Age':
+        wanted = ['imdb_users', 'aged_under_18', 'aged_18_29', 'aged_30_44', 'aged_45_plus']
+        markerColor = ['darkslateblue', '#3a4b53', '#57707d', '#7d97a5', '#becbd2']
+        print('Age')
+
+    #####Finds rating and number of voters for listed demographics
+    for x in range(0, len(rt) - 5):
+        href = str(rt[x].find('a'))
+        index = href.find("=", 10) + 1
+        index2 = href.find(">", 10) - 1
+
+        if href[index:index2] in wanted:
+            demo.append(href[index:index2])
+            rating.append(rt[x].find(class_='bigcell').text)
+            votes.append(str(rt[x].find('a').text).strip())
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=demo,
+        y=rating,
+        marker_color=markerColor,
+        text=rating,
+        textposition='auto'))
+
+    if demo != []:
+        fig.update_layout(
+            title= mode + ' ratings for ' + cleanName,
+            yaxis={'range': [0, 10]},
+            margin={'t':40,'l':10,'b':0,'r':10},
+            height=400
+        )
+
+    else:
+        fig.update_layout(
+            title='No IMDb Ratings for ' + cleanName)
+    return fig
+
+def singleShow(imdbID):
 
     url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
 
@@ -41,48 +88,11 @@ def singleShow(imdbID, mode):
 
     rt = soup.find_all(class_='ratingTable')
 
-    demo = []
-    rating = []
-    votes = []
-    markerColor = []
-    if mode == 'Gender':
-        wanted = ['imdb_users', 'males', 'females']
-        markerColor = ['darkslateblue', 'cornflowerblue', 'hotpink']
-        print('Gender')
-    elif mode == 'Age':
-        wanted = ['imdb_users', 'aged_under_18', 'aged_18_29','aged_30_44','aged_45_plus']
-        markerColor = ['darkslateblue','#3a4b53', '#57707d','#7d97a5','#becbd2']
-        print('Age')
+    figG = makeFigure(rt, 'Gender', cleanName)
+    figA = makeFigure(rt, 'Age', cleanName)
+    figs = [figG, figA]
 
-    #####Finds rating and number of voters for listed demographics
-    for x in range(0, len(rt)-5):
-        href = str(rt[x].find('a'))
-        index = href.find("=", 10) + 1
-        index2 = href.find(">", 10) - 1
-
-        if href[index:index2] in wanted:
-            demo.append(href[index:index2])
-            rating.append(rt[x].find(class_='bigcell').text)
-            votes.append(str(rt[x].find('a').text).strip())
-
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x= demo,
-        y = rating,
-        marker_color = markerColor,
-        text = rating,
-        textposition = 'auto'))
-
-    if demo != []:
-        fig.update_layout(
-            title='IMDb Ratings for ' + cleanName,
-            yaxis = {'range':[0,10]})
-
-    else:
-        fig.update_layout(
-            title='No IMDb Ratings for ' + cleanName)
-    return fig
+    return figs
 
 
 fig = go.Figure()
@@ -108,7 +118,7 @@ navbar = dbc.Navbar(
         ]),
     dbc.Row([
         dbc.Col(
-            dbc.NavbarBrand("IMDb Visualizer", className="ml-2", style={'font-size': '25px', 'padding-left':'20px'}),
+            dbc.NavbarBrand("IMDb Reviews Visualizer", className="ml-2", style={'font-size': '25px', 'padding-left':'20px'}),
         width=3
         ),
         ] ),
@@ -129,20 +139,47 @@ navbar = dbc.Navbar(
 tab1 = dbc.Card(
     dbc.CardBody(
         [
-            html.H3('What is IMDb Visualizer?'),
-            html.P('Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.')
+            html.H3("What is the IMDb Reviews Visualizer?"),
+            html.P(children=[
+                "When looking for a new show to watch, we often "
+                "check the ratings first on a site like IMDb. When deciding between shows like ",
+                html.Em('Amish Mafia'),
+                " (3.1) or ",
+                html.Em('Chernobyl'),
+                " (9.4), the choice is clear. But when the stakes are high",
+                " and the ratings are close, a single value rating just doesn't cut it.",
+                " In these cases, we can take a closer look at the ratings broken down by demographics",
+                " such as age or gender.",
+                html.Br(),html.Br(),
+                "Some shows skew heavily towards one demographic, like ",
+                html.Em('Sex & the City'),
+                " with a whopping 2.1 point difference between men and women. Or ",
+                html.Em('Beavis & Butt-Head'),
+                " with a 1 point difference in the other direction. And it seems like the older you get,",
+                " the more you love shows like ",
+                html.Em('Downton Abbey'),
+                " while the teens just can't get enough of their ",
+                html.Em('Gossip Girl.'),
+                html.Br(),html.Br(),
+                "Check out the ratings yourself by clicking the ",
+                html.Strong("Try it!"),
+                " tab."
+
+            ])
         ]
     )
 )
 tab2 = dbc.Card(
     dbc.CardBody(
         [
-            dbc.RadioItems(id='RadioSelect',
-                       options=[
-                           {'label':'Gender', 'value':'Gender'},
-                           {'label':'Age', 'value':'Age'}
-                        ], value='Gender'),
-            dcc.Input(id="input1", type="text", placeholder="Type name of show", debounce=True),
+            html.P(children=[
+                    "Now, take these ratings with a grain of salt. Just because a show is poorly rated by people"
+                    " of your age or gender, that doesn't mean you wont like it. ",
+                    html.Em('The Mindy Project'),
+                    " is an objectively great show even though men rated it 1.6 points lower than women! "
+            ]),
+            html.P("Search for a specific show or leave it blank and click Search for the current top shows:"),
+            dcc.Input(id="input1", type="text", placeholder="Type name of show",value='', debounce=True),
             dbc.Button('Search', id='submit-val', color='primary'),
             html.Div(id="output1"),
             html.Div(id="dropText"),
@@ -152,6 +189,10 @@ tab2 = dbc.Card(
                 value='',
                 style={'display': 'none',}
             ),
+
+
+
+
         ]
     )
 )
@@ -166,62 +207,86 @@ app.layout = html.Div(children=[
     html.Br(),
     dbc.Row([
         dbc.Col(tabs),
+    ]),
+    html.Br(),
+    dbc.Row([
         dbc.Col(
-            dbc.Card(
+            dbc.Card(id='GCard', children=[
                 dbc.CardBody(
                     dcc.Graph(
-                    id='IMDb',
+                    id='Gender',
                     figure=fig),
-                )
+
+                )], style={'display': 'none'}
             )
         ),
+        dbc.Col(
+            dbc.Card(id='ACard', children=[
+                dbc.CardBody(
+                    dcc.Graph(
+                        id='Age',
+                        figure=fig),
+
+                )], style={'display': 'none'}
+                     )
+        ),
+
     ])
+
+
 ]
 )
 
 
 #### Update figure and text upon search
 @app.callback(
-    [Output('IMDb', 'figure'),
+    [Output('Gender', 'figure'),
+    Output('Age', 'figure'),
     Output('output1', 'children'),
     Output('dropdown', 'options'),
     Output('dropdown', 'style'),
-    Output('dropText', 'children')],
+    Output('dropText', 'children'),
+    Output('GCard', 'style'),
+    Output('ACard', 'style'),],
     [Input('submit-val', 'n_clicks'),
-    Input('dropdown', 'value'),
-    Input('RadioSelect', 'value')],
+    Input('dropdown', 'value'),],
     [State('input1', 'value')]
 )
 
 #### Confused how to make decide when to take show value from text box vs dropdown
-def update_from_search(clicks, dropValue, radioValue, input_value):
+def update_from_search(clicks, dropValue, input_value):
     global dropDownList
     global showList
     trigger = dash.callback_context.triggered[0]['prop_id']
     print(trigger)
     if trigger == 'submit-val.n_clicks':
+        print(input_value)
         if input_value != None:
 
             showList = getShows(input_value)
 
             if showList != {}:
                 firstShowID = next(iter(showList.keys()))
-                updatedFig = singleShow(firstShowID, radioValue)
+                updatedFigs = singleShow(firstShowID)
                 dropDownList = [{'label': showList[i], 'value': i} for i in iter(showList.keys())]
-                return(updatedFig,
+                return(updatedFigs[0],
+                       updatedFigs[1],
                        '',
                        dropDownList,
                        {'display': 'block'},
                        'Wrong show? Check here for other results:',
-
+                       {'display': 'block'},
+                       {'display': 'block'}
                        )
             else:
-                return(go.Figure(),
-                       'No show found with name: {}'.format(input_value),
-                      [],
-                      {'display': 'none'},
-                      '',
-
+                return(fig,
+                        fig,
+                        'No show found with name: {}'.format(input_value),
+                        [],
+                        {'display': 'none'},
+                        '',
+                        {'display': 'block'},
+                        {'display': 'block'}
                        )
 
     elif trigger == 'dropdown.value':
@@ -229,42 +294,27 @@ def update_from_search(clicks, dropValue, radioValue, input_value):
             print("dropValue trying to update")
             print(dropValue)
             print(dropDownList)
-            updatedFig = singleShow(dropValue, radioValue)
-            return(updatedFig,
+            updatedFigs = singleShow(dropValue)
+            return(updatedFigs[0],
+                   updatedFigs[1],
                    '',
                    dropDownList,
                    {'display': 'block'},
-                   'Wrong show? Check here for other results:'
+                   'Wrong show? Check here for other results:',
+                   {'display': 'block'},
+                   {'display': 'block'}
                    )
 
-    elif trigger  == 'RadioSelect.value':
-        if dropValue != '':
-            print("from dropvalue")
-            print(dropValue)
-            updatedFig = singleShow(dropValue, radioValue)
-            return (updatedFig,
-                    '',
-                    dropDownList,
-                    {'display': 'block'},
-                    'Wrong show? Check here for other results:'
-                    )
-        elif len(dropDownList) > 0:
-            print(next(iter(showList.keys())))
-            updatedFig = singleShow(next(iter(showList.keys())), radioValue)
-            return (updatedFig,
-                    '',
-                    dropDownList,
-                    {'display': 'block'},
-                    'Wrong show? Check here for other results:'
-                    )
 
-
-    return(go.Figure(),
+    return(fig,
+           fig,
            '',
            [],
            {'display': 'none'},
-           ''
+           '',
+           {'display': 'none'},
+           {'display': 'none'}
            )
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
