@@ -239,6 +239,8 @@ def update_from_search(clicks, dropValue, radioValue, input_value):
 
     elif trigger  == 'RadioSelect.value':
         if dropValue != '':
+            print("from dropvalue")
+            print(dropValue)
             updatedFig = singleShow(dropValue, radioValue)
             return (updatedFig,
                     '',
@@ -247,6 +249,7 @@ def update_from_search(clicks, dropValue, radioValue, input_value):
                     'Wrong show? Check here for other results:'
                     )
         elif len(dropDownList) > 0:
+            print(next(iter(showList.keys())))
             updatedFig = singleShow(next(iter(showList.keys())), radioValue)
             return (updatedFig,
                     '',
@@ -264,4 +267,4 @@ def update_from_search(clicks, dropValue, radioValue, input_value):
            )
 
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(debug=True)
