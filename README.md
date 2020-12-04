@@ -2,7 +2,8 @@
 IMDb Visualizer is an interactive dashboard for viewing IMDb tv show ratings broken down by Age and Gender.
 
 Check out the web app on Heroku:
-<img src="/assets/heroku-logotype-horizontal-white.jpg" width="200"/>
+
+<a href="https://imdb-visualizer.herokuapp.com/"><img src="/assets/heroku-logotype-horizontal-white.jpg" width="200"></img></a>
 ## Motivation
 When looking for a new show to watch, we often check the ratings first on a site like IMDb. When deciding between
 shows like Amish Mafia (3.1) or Chernobyl (9.4), the choice is clear. But when the stakes are high and the ratings are
