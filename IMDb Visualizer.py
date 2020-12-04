@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-import plotly.offline as pyo
 import plotly.graph_objs as go
 import dash
 import dash_core_components as dcc
@@ -8,7 +7,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
-#### Returns list of show names correspnding IMDb IDs for the search term
+# Returns list of show names corresponding IMDb IDs for the search term
 def getShows(rawName):
     if rawName != None:
         showName = rawName.replace(' ', '+')
@@ -29,7 +28,7 @@ def getShows(rawName):
             showList[imdbID] = show.find('a').text + " " + year
         return showList
 
-#### Collects IMDb rating information for a given show and returns a figure
+# Uses rating data passed from singleShow() to generate figures
 def makeFigure(rt, mode, cleanName):
     demo = []
     rating = []
@@ -39,13 +38,11 @@ def makeFigure(rt, mode, cleanName):
     if mode == 'Gender':
         wanted = ['imdb_users', 'males', 'females']
         markerColor = ['darkslateblue', 'cornflowerblue', 'hotpink']
-        print('Gender')
     elif mode == 'Age':
         wanted = ['imdb_users', 'aged_under_18', 'aged_18_29', 'aged_30_44', 'aged_45_plus']
         markerColor = ['darkslateblue', '#3a4b53', '#57707d', '#7d97a5', '#becbd2']
-        print('Age')
 
-    #####Finds rating and number of voters for listed demographics
+    # Finds rating and number of voters for listed demographics
     for x in range(0, len(rt) - 5):
         href = str(rt[x].find('a'))
         index = href.find("=", 10) + 1
@@ -57,6 +54,7 @@ def makeFigure(rt, mode, cleanName):
             votes.append(str(rt[x].find('a').text).strip())
 
     fig = go.Figure()
+
     fig.add_trace(go.Bar(
         x=demo,
         y=rating,
@@ -77,6 +75,7 @@ def makeFigure(rt, mode, cleanName):
             title='No IMDb Ratings for ' + cleanName)
     return fig
 
+# Collects ratings information for a single show and uses makeFigure() to return figures for Gender and Age
 def singleShow(imdbID):
 
     url2 = 'http://www.imdb.com/title/' + imdbID + '/ratings?ref_=tt_ov_rt'
@@ -97,15 +96,15 @@ def singleShow(imdbID):
 
 fig = go.Figure()
 
-#### Initiate the app
+# Initiate the app and set theme (other themes at https://bootswatch.com/)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-#### Set up the layout
-
+# Define the app layout
 dropDownList = []
 PLOTLY_LOGO = "https://images.plot.ly/logo/new-branding/plotly-logomark.png"
 GIT_LOGO = "/assets/GitHub-Mark-Light-64px.png"
+
 navbar = dbc.Navbar(
     [
     dbc.Row([
@@ -136,6 +135,7 @@ navbar = dbc.Navbar(
     color="dark",
     dark=True,
 )
+
 tab1 = dbc.Card(
     dbc.CardBody(
         [
@@ -164,11 +164,11 @@ tab1 = dbc.Card(
                 "Check out the ratings yourself by clicking the ",
                 html.Strong("Try it!"),
                 " tab."
-
             ])
         ]
     )
 )
+
 tab2 = dbc.Card(
     dbc.CardBody(
         [
@@ -189,19 +189,17 @@ tab2 = dbc.Card(
                 value='',
                 style={'display': 'none',}
             ),
-
-
-
-
         ]
     )
 )
+
 tabs = dbc.Tabs(
     [
         dbc.Tab(tab1, label="About"),
         dbc.Tab(tab2, label="Try it!"),
     ]
 )
+
 app.layout = html.Div(children=[
     navbar,
     html.Br(),
@@ -230,15 +228,10 @@ app.layout = html.Div(children=[
                 )], style={'display': 'none'}
                      )
         ),
-
     ])
+])
 
-
-]
-)
-
-
-#### Update figure and text upon search
+# Update figure and text upon search
 @app.callback(
     [Output('Gender', 'figure'),
     Output('Age', 'figure'),
@@ -253,14 +246,14 @@ app.layout = html.Div(children=[
     [State('input1', 'value')]
 )
 
-#### Confused how to make decide when to take show value from text box vs dropdown
+# Called whenever an Input value changes, but not when a State value changes
 def update_from_search(clicks, dropValue, input_value):
     global dropDownList
     global showList
+
     trigger = dash.callback_context.triggered[0]['prop_id']
-    print(trigger)
+
     if trigger == 'submit-val.n_clicks':
-        print(input_value)
         if input_value != None:
 
             showList = getShows(input_value)
@@ -291,9 +284,6 @@ def update_from_search(clicks, dropValue, input_value):
 
     elif trigger == 'dropdown.value':
         if dropValue != '':
-            print("dropValue trying to update")
-            print(dropValue)
-            print(dropDownList)
             updatedFigs = singleShow(dropValue)
             return(updatedFigs[0],
                    updatedFigs[1],
@@ -305,7 +295,6 @@ def update_from_search(clicks, dropValue, input_value):
                    {'display': 'block'}
                    )
 
-
     return(fig,
            fig,
            '',
@@ -316,5 +305,6 @@ def update_from_search(clicks, dropValue, input_value):
            {'display': 'none'}
            )
 
+# Start server
 if __name__ == '__main__':
     app.run_server()
