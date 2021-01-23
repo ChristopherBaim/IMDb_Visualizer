@@ -49,7 +49,15 @@ def makeFigure(rt, mode, cleanName):
         index2 = href.find(">", 10) - 1
 
         if href[index:index2] in wanted:
-            demo.append(href[index:index2])
+            title = href[index:index2]
+            if mode == 'Gender' and title != 'imdb_users':
+                demo.append(title)
+                print(title)
+                print(title[5:])
+            else:
+                demo.append(title[5:])
+                print(title[5:])
+
             rating.append(rt[x].find(class_='bigcell').text)
             votes.append(str(rt[x].find('a').text).strip())
 
